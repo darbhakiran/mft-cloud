@@ -60,7 +60,7 @@ docker tag <source_image>:<tag> registry.<region>.bluemix.net/<my_namespace>/<ne
 ```  
 
 **Note:**  
-1. <source_image>:<tag> - Is the image you want to tag. This must be a fully qualified name, that is must include exact name as you see in command output of `ibmcloud cr images`  
+1. <source_image>:<tag> - Is the image you want to tag. Use exact name and tag of the docker image as you see in your local environment. You can find this by running command `docker images` on your local environment.
 2. Replace <region> with the name of your region. Replace <my_namespace> with the namespace that you created in **Setup a namespace** section.   
 3. Replace <new_image_repo> and <new_tag> with the target image repository name and chose a tag for it.  
 4. Run the command for mqadvanced image and also for the agent redistributable image.  
@@ -137,13 +137,13 @@ spec:
 **Note:** Eye catchers from the file are
 1. `image: registry.eu-de.bluemix.net/mft-images/mqadvmft:1.0` - This is the image we tagged and pushed into cloud registry as part of section **Push MQ-MFT images to IBM Cloud Docker Registry**
 2. We set number of replicas to 1, this can be increased, for ex:3, by that Kubernetes run three replicas of queue manager pod. If the High-Availability is a required, **replicas** must be atleast 2.
-3. A copy of this file is provided as part of the repository files which you can download and use.
+3. A copy of this file is provided as part of the repository files which you can download and use. This is a sample yaml file and can be modified as per your environment.
 4. More about this can be found at [Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#creating-a-deployment)
 
 ###### Apply the deployment on your Kubernetes cluster
 1. Run following command to create the queue manager deployment
     ```
-    kubectl create -f mqadvdeployment.yaml
+    kubectl create -f filepath/mqadvdeployment.yaml
     ```
 2. Check if the deployment is successful and pod is in running state. Run the below command with few seconds gap until you find the pod status to be running
     ```
@@ -193,7 +193,26 @@ Combine the IP address and the port number together to access the relevant endpo
 MQ Web Console: https://169.51.10.240:32075/ibmmq/console/ (admin / passw0rd)
 MQ Explorer: 169.51.10.240, port 30063 (admin / passw0rd, channel=DEV.ADMIN.SVRCONN)
 ```
+Note: Do not close the command shell as we use the same command shell for next section.
 
+### Configure the Queue manager for MFT
+This tutorial uses single queue manager topology, where a single queue manager is configured for MFT Coordination,Command and Agent Queue manager setup.
+
+1. Setup the Queue manager (ex:**QM1**) as coordination queue manager. Running the **mft_setupCoordination.sh** script will create required configuration.
+
+    ```
+    kubectl exec -ti <podname> /etc/mqm/mft/mqft_setupCoordination.sh
+    ```
+2. We will create a source agent on kubernetes cluster as part of this tutorial. These agents are **AGENTSRC**. As a first step of agent configuration, we have to create their congfiguration on the coordination queue manager.
+
+    ```
+    kubectl exec -ti <podname> /etc/mqm/mft/mqft_setupAgent.sh AGENTSRC
+    ```
+    **Note:** 
+    1. `<PODNAME>` is the name of the queue manager pod, created in above section.
+    2. **mqft_setupAgent.sh** script requires MFT agent name as input parameter
+
+    
 ### MFT Agents deployment on to Kubernetes cluster
 
 Create a new deployment file(mft_agentredit_Deployment-src.yaml) for deploying the MFT Agent as a pod and container within it.
@@ -239,12 +258,12 @@ In order to run it for destination agent,
 3. Find and replace **src** with **dest**.
 4. All the other settings would remain same for destination agent.
 
-A copy of these deployment files is provided as part of the repository files, which you can download and use.  
+A copy of these deployment files is provided as part of the repository files, which you can download and use. These files are sample files and can be updated based on your environment.
 
 ###### Apply the deployment on your Kubernetes cluster
 1. Run following command to create the MFT Agent deployment
     ```
-    kubectl create -f mft_agentredit_Deployment-src.yaml
+    kubectl create -f filepath/mft_agentredit_Deployment-src.yaml
     ```
 2. Check if the deployment is successful and pod is in running state. Run the below command with few seconds gap until you find the pod status to be running
     ```
@@ -257,7 +276,7 @@ A copy of these deployment files is provided as part of the repository files, wh
     ```
     **Note:** 
     1. `<pod-name>` can be found in the output of command `kubectl get pods`
-    2. `<container-name>` can be found in the mqadvdeployment.yaml file.
+    2. `<container-name>` can be found in the mqadvdeployment.yaml file(at spec-->containers-->name)
 4. Repeat steps 1-3 for destination agent deployment using the **mft_agentredit_Deployment-dest.yaml** file.
 
 ### Verify if the MFT Agents are configured correctly.
@@ -283,7 +302,7 @@ Inorder to verify that MFT environment and its Agents are configured correctly,w
 If the command output in your environment is similar to the above Sample output, that confirms that MFT Agents are configured and running in your kubernetes cluster.
 
 ### Conclusion 
-As part of this document we have pushed doccker images into cloud registry, created a kubernetes cluster, deployed mq and mft-agents containers onto kubernetes cluster and verified agents are configured correctly and responding to mft commands.
+As part of this document we have pushed docker images into cloud registry, created a kubernetes cluster, deployed mq and mft-agents containers onto kubernetes cluster and verified agents are configured correctly and responding to mft commands.
 
 #### Related information
 This article explains on running IBM MQ DockerHub image on your kubernetes  
